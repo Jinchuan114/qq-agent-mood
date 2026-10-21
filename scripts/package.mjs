@@ -5,7 +5,8 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(HERE, '..');
 const OUT = path.join(ROOT, 'dist');
 
 // 白名单：只有这里列出来的东西会进包
@@ -29,16 +30,19 @@ const PICK = [
   'test/patch.mjs',
 ];
 
-// 绝对不能出现在包里东西（出现就让打包失败）
-const FORBID_TEXT = [
-  ['他的 QQ 号', '3544181418'],
-  ['群号（白色茶话会）', '720380274'],
-  ['群号（狗窝）', '833376590'],
-  ['群号（我要打求）', '938501344'],
-  ['她的 QQ 号', '3875800159'],
-  ['本机路径', 'C:\\Users\\Ling'],
-  ['本机路径', 'C:/Users/Ling'],
-];
+// 绝对不能出现在包里东西（出现就让打包失败）。
+// 具体的号码/路径写在 scripts/private-words.local.json（不进 git），这样脚本本身也能公开。
+const LOCAL_WORDS = path.join(HERE, 'private-words.local.json');
+let FORBID_TEXT = [];
+if (fs.existsSync(LOCAL_WORDS)) {
+  FORBID_TEXT = JSON.parse(fs.readFileSync(LOCAL_WORDS, 'utf8'));
+} else {
+  // 没有本地词表就退回通用规则：长得像 QQ 号的一串数字、带用户名的本机路径
+  FORBID_TEXT = [
+    ['像 QQ 号的一串数字', /(?<!\d)[1-9]\d{5,10}(?!\d)/],
+    ['带用户名的本机路径', /[A-Za-z]:[\\/]+Users[\\/]+[^\\/\s]+/],
+  ];
+}
 // Key 要按形态认，不然 CSS 里的 mask-image 会被误判
 const FORBID_RE = [
   ['API Key', /\bsk-[A-Za-z0-9_-]{16,}/],
@@ -67,7 +71,12 @@ const walk = (dir) => {
     if (ent.isDirectory()) { walk(p); continue; }
     const text = fs.readFileSync(p, 'utf8');
     for (const [what, needle] of FORBID_TEXT) {
-      if (text.includes(needle)) problems.push(`${path.relative(STAGE, p)} 里出现了${what}（${needle}）`);
+      if (needle instanceof RegExp) {
+        const m = text.match(needle);
+        if (m) problems.push(`${path.relative(STAGE, p)} 里出现了${what}（${m[0].slice(0, 24)}）`);
+      } else if (text.includes(needle)) {
+        problems.push(`${path.relative(STAGE, p)} 里出现了${what}（${needle}）`);
+      }
     }
     for (const [what, re] of FORBID_RE) {
       const m = text.match(re);
