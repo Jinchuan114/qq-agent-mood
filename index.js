@@ -5,7 +5,7 @@
 // 数据：<数据目录>/self/qq-agent-mood/mood.json，卸载即消失。
 import fs from 'node:fs';
 import path from 'node:path';
-import { dataRoot, mergeConfig, readState, writeState, clearState } from './lib/store.js';
+import { dataRoot, mergeConfig, readState, writeState, clearState, peekStateSync } from './lib/store.js';
 import { applyKind } from './lib/apply.js';
 import { ruleKind, normalizeKind } from './lib/rule.js';
 import { judgeKind } from './lib/judge.js';
@@ -130,10 +130,20 @@ async function classify(text, cfg) {
 }
 
 // 应用里插件自己的 console.log 不进应用日志，排查只能靠文件留痕。
+// 留痕文件会一直长——超过 512KB 砍掉前面，只留最近 200 行。
+const TRACE_MAX_BYTES = 512 * 1024;
+const TRACE_KEEP_LINES = 200;
 async function trace(msg) {
   try {
     const dir = await dataRoot();
-    fs.appendFileSync(path.join(dir, 'hook.log'), `${new Date().toISOString()} ${msg}\n`, 'utf8');
+    const file = path.join(dir, 'hook.log');
+    try {
+      if (fs.statSync(file).size > TRACE_MAX_BYTES) {
+        const lines = fs.readFileSync(file, 'utf8').split('\n').slice(-TRACE_KEEP_LINES);
+        fs.writeFileSync(file, lines.join('\n'), 'utf8');
+      }
+    } catch { /* 第一次写，没有这个文件 */ }
+    fs.appendFileSync(file, `${new Date().toISOString()} ${msg}\n`, 'utf8');
   } catch { /* 留痕失败不影响主流程 */ }
 }
 
@@ -212,17 +222,29 @@ export const hooks = {
 };
 
 // ─────────────────────────── 能力门（补丁装了才有调用方） ───────────────────────────
+// ⚠️ 这两个函数会被应用**同步**调用：返回 Promise 会被当成没值（静默失效）。
+// 所以现读文件拿分数，而不是用钩子留下的 lastBand —— 否则重启后第一轮、
+// 或钩子没跑的那一轮，拿到的是旧的/默认的档位。
+function bandNow(cfg) {
+  const st = peekStateSync();
+  if (!st) return lastBand;
+  const score = decayScore(Number(st.score) || 0, st.since ?? st.at, Date.now(), cfg.decayPerHour);
+  return bandOf(score, cfg.bands);
+}
+
 export const providers = {
   'mood.bubble-cap': () => {
     const cfg = cfgNow();
-    if (lastBand === 'ignore') return Math.max(1, Number(cfg.caps?.low ?? 1));
-    if (lastBand === 'hurt') return Math.max(1, Number(cfg.caps?.low ?? 2));
+    const band = bandNow(cfg);
+    if (band === 'ignore') return Math.max(1, Number(cfg.caps?.low ?? 1));
+    if (band === 'hurt') return Math.max(1, Number(cfg.caps?.low ?? 2));
     return null;
   },
   'mood.mute-rate': () => {
     const cfg = cfgNow();
-    if (lastBand === 'ignore') return Number(cfg.mute?.ignore ?? 0.75);
-    if (lastBand === 'hurt') return Number(cfg.mute?.hurt ?? 0.5);
+    const band = bandNow(cfg);
+    if (band === 'ignore') return Number(cfg.mute?.ignore ?? 0.75);
+    if (band === 'hurt') return Number(cfg.mute?.hurt ?? 0.5);
     return 0;
   },
 };

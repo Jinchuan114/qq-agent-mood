@@ -61,6 +61,25 @@ const quiet = [{ role: 'user', content: '在吗' }];
 await mod.hooks['before-llm-messages']({ messages: quiet, chatKey: 'group:1' });
 ok('平常不贴心情行（省 token）', quiet.length === 1, JSON.stringify(quiet));
 
+console.log('· 能力门读的是文件，不是钩子留下的缓存');
+// 把「起算时刻」推到 10 小时前：分数该回落，能力门要跟着变回 null / 0。
+// 如果 provider 用的是内存里的 lastBand，这里就会还是「不高兴」。
+const stNow = readMood();
+stNow.since = Date.now() - 10 * 3600 * 1000;
+stNow.at = Date.now() - 10 * 3600 * 1000;
+fs.writeFileSync(stFile, JSON.stringify(stNow, null, 2), 'utf8');
+ok('时间过去后气泡上限自己放开', mod.providers['mood.bubble-cap']() === null, String(mod.providers['mood.bubble-cap']()));
+ok('时间过去后静音率归 0', Number(mod.providers['mood.mute-rate']()) === 0, String(mod.providers['mood.mute-rate']()));
+
+console.log('· 留痕文件不会一直长');
+const logFile = path.join(TMP, 'self', 'qq-agent-mood', 'hook.log');
+fs.writeFileSync(logFile, Array.from({ length: 8000 }, (_, i) => `old ${i} ${'x'.repeat(60)}`).join('\n'), 'utf8');
+const bigBefore = fs.statSync(logFile).size;
+await mod.hooks['before-llm-messages']({ messages: [{ role: 'user', content: '在吗' }], chatKey: 'group:1' });
+const bigAfter = fs.statSync(logFile).size;
+ok('超过 512KB 会被砍短', bigAfter < bigBefore / 2, `${bigBefore} → ${bigAfter}`);
+ok('砍完还留着最新一行', /before-llm-messages/.test(fs.readFileSync(logFile, 'utf8').split('\n').slice(-3).join('\n')));
+
 console.log('· 工具');
 ok('注册了 note_mood', Boolean(tools.note_mood));
 const r = await tools.note_mood.execute({ chatKey: 'private:5', senderId: '5' }, { kind: 'praise', why: '他夸我了' });
