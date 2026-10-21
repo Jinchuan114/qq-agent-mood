@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>心情 · 面板</title>
+<style>
+  :root{
+    --bg:#101218; --card:#181b23; --card2:#1e2230; --line:#2a2f3d;
+    --txt:#e9ebf2; --dim:#8a92a6; --accent:#6f9bff;
+    --bad:#ff6b81; --good:#57d9a3;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 50% -200px,#1a2030 0%,var(--bg) 60%);
+    color:var(--txt);font:14px/1.6 "Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+  .wrap{max-width:980px;margin:0 auto;padding:28px 20px 56px}
+  h1{font-size:19px;margin:0 0 4px;font-weight:600}
+  .sub{color:var(--dim);font-size:12.5px;margin-bottom:22px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 22px;margin-bottom:16px}
+  .row{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  .grow{flex:1}
+  .muted{color:var(--dim);font-size:12.5px}
+
+  /* ── 心情条：主角 ── */
+  .hero{padding:26px 24px 20px;background:
+    linear-gradient(180deg,rgba(111,155,255,.07),rgba(0,0,0,0) 55%),var(--card);}
+  .hero-top{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+  .score{font-size:52px;font-weight:680;letter-spacing:-2px;line-height:.95;font-variant-numeric:tabular-nums}
+  .score i{font-size:16px;font-weight:400;color:var(--dim);font-style:normal;margin-left:5px}
+  .chip{padding:4px 12px;border-radius:999px;font-size:13px;border:1px solid var(--line);
+    color:var(--dim);transition:.25s}
+  .hero-top .grow{min-width:20px}
+
+  .moodbar{margin:24px 0 0;user-select:none}
+  .moodbar .track{position:relative;height:46px;border-radius:13px;cursor:pointer;
+    background:linear-gradient(90deg,#4a2130 0%,#38232e 22%,#2b2e3a 40%,#2b2e3a 60%,#26362f 78%,#1c4738 100%);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.05), inset 0 6px 18px rgba(0,0,0,.45)}
+  .moodbar .glow{position:absolute;inset:0;border-radius:13px;opacity:.55;
+    background:linear-gradient(90deg,#ff8fb2,#6f9bff 50%,#57d9a3);mix-blend-mode:screen;
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 var(--p),transparent calc(var(--p) + 16%))}
+
+  .moodbar .fill{position:absolute;top:14px;height:18px;border-radius:9px;
+    background:linear-gradient(90deg,rgba(255,143,178,.7),rgba(111,155,255,.7) 50%,rgba(87,217,163,.7));
+    opacity:.75;transition:all .35s cubic-bezier(.2,.8,.2,1)}
+  .moodbar .zero{position:absolute;top:8px;bottom:8px;left:50%;width:1px;background:rgba(255,255,255,.22)}
+  .moodbar .tick{position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.13)}
+  .moodbar .tick b{position:absolute;top:-19px;left:50%;transform:translateX(-50%);
+    font-size:10.5px;color:#6b7386;font-weight:400;white-space:nowrap}
+  .moodbar .knob{position:absolute;top:50%;width:22px;height:22px;border-radius:50%;
+    transform:translate(-50%,-50%);background:#fff;
+    box-shadow:0 0 0 5px rgba(111,155,255,.18), 0 6px 16px rgba(0,0,0,.6);
+    transition:left .35s cubic-bezier(.2,.8,.2,1), background .35s, box-shadow .35s}
+  .moodbar .knob::after{content:"";position:absolute;inset:7px;border-radius:50%;
+    background:var(--knob,#6f9bff)}
+  .zonecaps{display:flex;justify-content:space-between;margin-top:9px;font-size:11.5px;color:#69728a}
+  .zonecaps i{font-style:normal}
+  .hint{margin-top:10px;font-size:12px;color:#5f6779}
+
+  .speak{margin-top:16px;display:flex;gap:12px;align-items:flex-start;
+    background:var(--card2);border-radius:12px;padding:12px 14px}
+  .speak .who{flex:0 0 auto;font-size:12px;color:var(--dim);padding-top:2px}
+  .speak .said{font-size:14px;line-height:1.7;color:#dfe3ee}
+  .speak .said em{color:var(--dim);font-style:normal;font-size:12px}
+
+  .list{margin:0;padding:0;list-style:none}
+  .list li{display:flex;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  .list li:last-child{border-bottom:0}
+  .delta{flex:0 0 52px;text-align:right;font-variant-numeric:tabular-nums}
+  .delta.up{color:var(--good)} .delta.down{color:var(--bad)}
+  .when{flex:0 0 84px;color:var(--dim);font-size:12px}
+
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg button{background:var(--card2);color:var(--dim);border:1px solid var(--line);
+    border-radius:9px;padding:6px 12px;font-size:13px;cursor:pointer}
+  .seg button.on{color:var(--txt);border-color:#3d5a9e;background:#1f2a44}
+  .f{display:flex;align-items:center;gap:14px;margin:14px 0}
+  .f label{flex:0 0 150px;color:var(--dim);font-size:13px}
+  .f input[type=range]{flex:1;accent-color:var(--accent)}
+  .f .val{flex:0 0 84px;text-align:right;font-variant-numeric:tabular-nums}
+  details summary{cursor:pointer;color:var(--dim);font-size:13px;outline:none}
+  details[open] summary{margin-bottom:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--dim);font-weight:500;font-size:12px}
+  td.num{font-variant-numeric:tabular-nums;text-align:right;width:90px}
+  input[type=number]{width:88px;background:var(--card2);color:var(--txt);border:1px solid var(--line);
+    border-radius:7px;padding:4px 8px;font-size:13px;text-align:right}
+  .try{display:flex;gap:10px;margin-top:6px}
+  .try input{flex:1;background:var(--card2);color:var(--txt);border:1px solid var(--line);
+    border-radius:9px;padding:9px 12px;font-size:13.5px}
+  .try button{background:#243a63;color:#dbe6ff;border:1px solid #37538f;border-radius:9px;
+    padding:9px 16px;font-size:13.5px;cursor:pointer}
+  .out{margin-top:12px;padding:11px 14px;background:var(--card2);border-radius:10px;font-size:13px;color:var(--dim)}
+  .out b{color:var(--txt)}
+  .foot{color:#5d6478;font-size:12px;text-align:center;margin-top:26px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>心情</h1>
+  <div class="sub" id="subTitle">草稿，全是假数据。这条可以拖着看——拖到哪儿，下面的分和话就跟着变。</div>
+
+  <!-- 主角：心情条 -->
+  <div class="card hero">
+    <div class="hero-top">
+      <div class="score"><span id="scoreV">18</span><i>分</i></div>
+      <div class="chip" id="bandChip">高兴</div>
+      <div class="grow"></div>
+      <div class="muted">最近一次：他说「舍不得骂我」 · 3 分钟前</div>
+    </div>
+
+    <div class="moodbar" id="moodbar">
+      <div class="track" id="track">
+        <div class="glow" id="glow" style="--p:50%"></div>
+        <div class="fill" id="fill" style="left:50%;width:18%"></div>
+        <div class="zero"></div>
+        <div class="tick" style="left:20%"><b>−60</b></div>
+        <div class="tick" style="left:40%"><b>−20</b></div>
+        <div class="tick" style="left:80%"><b>+60</b></div>
+        <div class="knob" id="knob" style="left:calc(50% + 18%);--knob:#57d9a3"></div>
+      </div>
+      <div class="zonecaps">
+        <i>−100 冷到底</i><i>懒得理</i><i>不高兴</i><i>平常</i><i>高兴</i><i>特别高兴</i><i>+100 高兴坏了</i>
+      </div>
+      <div class="hint">鼠标按住条拖，或者点一下——只改显示，不会真改她的分。</div>
+    </div>
+
+    <div class="speak">
+      <div class="who">她会这样说</div>
+      <div class="said" id="said">「诶——你终于来啦，我等你好久了。」<br><em>话多一点，语气词多，会主动找话说。</em></div>
+    </div>
+  </div>
+
+  <!-- 曲线 -->
+  <div class="card">
+    <div class="row"><b>最近 24 小时</b><div class="grow"></div><span class="muted">每小时一个点</span></div>
+    <div id="spark" style="margin-top:8px"></div>
+  </div>
+
+  <!-- 最近几次变化 -->
+  <div class="card">
+    <div class="row"><b>最近几次变化</b><div class="grow"></div><span class="muted">「谁」只存昵称</span></div>
+    <ul class="list">
+      <li><span class="when">3 分钟前</span><span class="grow">他说「我舍不得骂你」 → 被哄</span><span class="delta up">+18</span></li>
+      <li><span class="when">5 分钟前</span><span class="grow">他说「我是在骂你！傻鱼」 → 被骂</span><span class="delta down">−40</span></li>
+      <li><span class="when">1 小时前</span><span class="grow">她说「笨蛋就笨蛋呗」 → 自己记的：逗嘴</span><span class="delta">0</span></li>
+      <li><span class="when">昨天 22:40</span><span class="grow">群里被人说「少说话」 → 被骂（递减后）</span><span class="delta down">−28</span></li>
+    </ul>
+  </div>
+
+  <!-- 好上手的旋钮 -->
+  <div class="card">
+    <b>调她</b><div class="muted" style="margin:2px 0 14px">这四个就够用了，剩下的在「高级」里</div>
+
+    <div class="f">
+      <label>她什么脾气</label>
+      <div class="seg" id="temper"><button>温柔</button><button class="on">平衡</button><button>皮实</button></div>
+    </div>
+
+    <div class="f">
+      <label>多久能消气</label>
+      <input type="range" min="1" max="24" value="6" id="calm" />
+      <div class="val" id="calmV">6 小时</div>
+    </div>
+
+    <div class="f">
+      <label>心情低的时候</label>
+      <div class="seg" id="lowmood"><button class="on">只是语气变</button><button>也会少说话</button><button>明显不想理人</button></div>
+    </div>
+
+    <div class="f">
+      <label>让模型判断</label>
+      <div class="seg" id="judge"><button class="on">开</button><button>关</button></div>
+      <div class="val muted">每轮约 60 token</div>
+    </div>
+  </div>
+
+  <!-- 高级 -->
+  <div class="card">
+    <details>
+      <summary>高级：六类权重、档位、连续递减</summary>
+      <table>
+        <tr><th>别人说了什么</th><th>怎么记</th><th>分值变化</th></tr>
+        <tr><td>骂她、贬低她</td><td>被骂</td><td class="num"><input type="number" value="-40" /></td></tr>
+        <tr><td>「行了行了」「多大点事」</td><td>敷衍地哄</td><td class="num"><input type="number" value="-10" /></td></tr>
+        <tr><td>被骂但觉得好笑</td><td>当成玩笑</td><td class="num"><input type="number" value="-12" /></td></tr>
+        <tr><td>夸她、说喜欢她</td><td>被夸</td><td class="num"><input type="number" value="12" /></td></tr>
+        <tr><td>主人真心哄</td><td>被哄</td><td class="num"><input type="number" value="35" /></td></tr>
+        <tr><td>别人真心哄</td><td>被哄</td><td class="num"><input type="number" value="8" /></td></tr>
+      </table>
+
+      <div class="f" style="margin-top:18px">
+        <label>同一个方向越推越难</label>
+        <div class="seg" id="decay"><button>关</button><button>轻</button><button class="on">中</button><button>强</button></div>
+        <div class="val muted">第三次约六成</div>
+      </div>
+
+      <div class="muted" style="margin-top:6px">档位阈值：懒得理 −60 · 不高兴 −20 · 高兴 +20 · 特别高兴 +60</div>
+    </details>
+  </div>
+
+  <!-- 试算 -->
+  <div class="card">
+    <b>试一句</b><div class="muted" style="margin:2px 0 10px">输入一句话，看它会怎么记——不会真的改她的分</div>
+    <div class="try">
+      <input id="tryText" placeholder="比如：你今天怎么这么可爱" />
+      <button id="tryBtn">判一下</button>
+    </div>
+    <div class="out" id="tryOut">还没试。</div>
+  </div>
+
+  <div class="foot">qq-agent-mood · 面板只监听 127.0.0.1 · 关掉插件就消失</div>
+</div>
+
+<script>
+  // ── 心情条 ──
+  const BANDS = [
+    { max: -60, name: '懒得理', color: '#ff6b81',
+      said: '「……嗯。」<br><em>三个字就是全部。不接梗，不问，也不解释。</em>' },
+    { max: -20, name: '不高兴', color: '#ff8fb2',
+      said: '「哦。你要说就说吧。」<br><em>短，冷，语气词收掉，不主动找话。</em>' },
+    { max: 20, name: '平常', color: '#6f9bff',
+      said: '「在的呀，怎么了？」<br><em>正常长度，会叫主人，会问一句。</em>' },
+    { max: 60, name: '高兴', color: '#57d9a3',
+      said: '「诶——你终于来啦，我等你好久了。」<br><em>话多一点，语气词多，会主动找话说。</em>' },
+    { max: 101, name: '特别高兴', color: '#57d9a3',
+      said: '「主人主人！你猜我刚才看到什么了——」<br><em>连着好几条，一条装不下。</em>' },
+  ];
+  const bandOf = (v) => BANDS.find((b) => v <= b.max);
+  const track = document.getElementById('track');
+  const knob = document.getElementById('knob');
+  const fill = document.getElementById('fill');
+  const glow = document.getElementById('glow');
+
+  function render(v) {
+    v = Math.max(-100, Math.min(100, Math.round(v)));
+    const b = bandOf(v);
+    const pct = (v + 100) / 2;                 // 0..100
+    document.getElementById('scoreV').textContent = v > 0 ? '+' + v : String(v);
+    const chip = document.getElementById('bandChip');
+    chip.textContent = b.name;
+    chip.style.color = b.color;
+    chip.style.borderColor = b.color + '55';
+    chip.style.background = b.color + '14';
+
+    knob.style.left = pct + '%';
+    knob.style.setProperty('--knob', b.color);
+    knob.style.boxShadow = `0 0 0 5px ${b.color}2e, 0 0 22px ${b.color}66, 0 6px 16px rgba(0,0,0,.6)`;
+
+    const left = Math.min(50, pct), width = Math.abs(pct - 50);
+    fill.style.left = left + '%';
+    fill.style.width = width + '%';
+    glow.style.setProperty('--p', pct + '%');
+    document.getElementById('said').innerHTML = b.said;
+  }
+
+  let dragging = false;
+  const fromEvent = (e) => {
+    const r = track.getBoundingClientRect();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+    return (Math.max(0, Math.min(r.width, x)) / r.width) * 200 - 100;
+  };
+  track.addEventListener('pointerdown', (e) => { dragging = true; track.setPointerCapture(e.pointerId); render(fromEvent(e)); });
+  track.addEventListener('pointermove', (e) => { if (dragging) render(fromEvent(e)); });
+  track.addEventListener('pointerup', () => { dragging = false; });
+  track.addEventListener('pointercancel', () => { dragging = false; });
+  render(18);
+
+  // ── 曲线 ──
+  function drawSpark(data) {
+    const pts0 = data && data.length > 1 ? data : [18];
+    const pts = pts0;
+    const w = 900, h = 120, pad = 8, n = pts.length;
+    const x = (i) => (n === 1 ? w / 2 : pad + (w - pad * 2) * (i / (n - 1)));
+    const y = (v) => h / 2 - (v / 100) * (h / 2 - pad);
+    const d = pts.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+    const area = `${d} L${x(n - 1).toFixed(1)} ${h / 2} L${x(0).toFixed(1)} ${h / 2} Z`;
+    document.getElementById('spark').innerHTML = `
+      <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none">
+        <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#6f9bff"/><stop offset="100%" stop-color="#6f9bff" stop-opacity="0"/>
+        </linearGradient></defs>
+        <line x1="0" y1="${h/2}" x2="${w}" y2="${h/2}" stroke="#2a2f3d" stroke-dasharray="4 4"/>
+        <path d="${area}" fill="url(#g)" opacity=".35"/>
+        <path d="${d}" fill="none" stroke="#6f9bff" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="${x(n-1)}" cy="${y(pts[n-1])}" r="3.5" fill="#fff"/>
+      </svg>`;
+  }
+  drawSpark([0,0,0,-6,-4,0,4,8,6,10,14,12,16,20,18,22,18,14,10,12,16,20,18,18]);
+
+  // ── 分段按钮 ──
+  document.querySelectorAll('.seg').forEach((seg) => {
+    seg.addEventListener('click', (e) => {
+      if (e.target.tagName !== 'BUTTON') return;
+      [...seg.children].forEach((b) => b.classList.toggle('on', b === e.target));
+      if (seg.id === 'judge') {
+        seg.nextElementSibling.textContent = e.target.textContent === '开' ? '每轮约 60 token' : '不花钱，只按关键词';
+      }
+    });
+  });
+
+  // ── 滑块 ──
+  const calm = document.getElementById('calm');
+  calm.addEventListener('input', () => { document.getElementById('calmV').textContent = calm.value + ' 小时'; });
+
+  // ── 试算 ──
+  const RX = [
+    [/笨|蠢|傻|机器人|闭嘴|滚/i, '被骂', -40, '不高兴'],
+    [/行了|好了好了|多大点事|至于吗/, '敷衍地哄', -10, '不高兴'],
+    [/可爱|好看|厉害|聪明|喜欢你|想你了/, '被夸', 12, '高兴'],
+    [/我陪你|别理他们|心疼|别难过/, '被我哄', 35, '高兴'],
+  ];
+  document.getElementById('tryBtn').addEventListener('click', () => {
+    const t = document.getElementById('tryText').value.trim();
+    const out = document.getElementById('tryOut');
+    if (!t) { out.innerHTML = '先写一句。'; return; }
+    const hit = RX.find(([re]) => re.test(t));
+    if (hit) out.innerHTML = `会记成 <b>${hit[1]}</b>，分值 <b>${hit[2] > 0 ? '+' : ''}${hit[2]}</b>，落到<b>${hit[3]}</b>那一档。（真装上以后这一步是模型判的，比这个准）`;
+    else out.innerHTML = '这句看不出明显倾向，会记成 <b>平常</b>，分数不动。';
+  });
+  document.getElementById('tryText').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('tryBtn').click(); });
+
+  // ── 接到真接口（只有插件自己起的服务才会成功；file:// 打开就一直用假数据） ──
+  const LIVE = { on: false, cfg: null };
+  const SEC = (ms) => {
+    const s = Math.max(0, (Date.now() - Number(ms || 0)) / 1000);
+    if (s < 60) return `${Math.round(s)} 秒前`;
+    if (s < 3600) return `${Math.round(s / 60)} 分钟前`;
+    if (s < 86400) return `${Math.round(s / 3600)} 小时前`;
+    return `${Math.round(s / 86400)} 天前`;
+  };
+  const post = async (p, body) => {
+    const r = await fetch(p, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body || {}) });
+    return r.json();
+  };
+  const save = async (patch) => {
+    // 设置一律写成扁平的键，跟 plugin.json 的 configSchema 对齐
+    const r = await post('/api/config', { settings: patch });
+    if (!r?.ok) document.getElementById('subTitle').textContent = `保存失败：${r?.error || '应用没回话'}`;
+    return r;
+  };
+
+  async function bootLive() {
+    let state;
+    try {
+      const r = await fetch('/api/state');
+      if (!r.ok) return;
+      state = await r.json();
+      if (!state?.ok) return;
+    } catch { return; }   // file:// 或插件没开面板 → 安静地用假数据
+
+    LIVE.on = true;
+    LIVE.cfg = state.config || {};
+    const cfg = LIVE.cfg;
+    document.getElementById('subTitle').innerHTML =
+      `已连上应用，这是她现在的真实心情。最后更新 ${new Date().toLocaleTimeString('zh-CN')}。`;
+
+    // 分数条
+    render(Number(state.score) || 0);
+    const last = (state.history || [])[0];
+    if (last) {
+      document.querySelector('.hero-top .muted').textContent =
+        `最近一次：${last.why ? `「${last.why}」` : last.from || '有人说了一句'} · ${SEC(last.at)}`;
+    }
+
+    // 最近几次变化
+    const list = document.querySelector('.list');
+    if (list && state.history?.length) {
+      list.innerHTML = state.history.map((h) => {
+        const d = Number(h.delta) || 0;
+        const word = h.kind === 'insult' ? '被骂' : h.kind === 'praise' ? '被夸'
+          : h.kind === 'soothe' ? '被哄' : h.kind === 'tease' ? '逗嘴' : h.kind === 'dull' ? '被敷衍' : h.kind || '';
+        return `<li><span class="when">${SEC(h.at)}</span><span class="grow">${h.why ? `「${h.why}」` : '没记理由'} → ${word}${h.by === 'self' ? '（自己记的）' : ''}</span>`
+          + `<span class="delta ${d > 0 ? 'up' : d < 0 ? 'down' : ''}">${d > 0 ? '+' + d : d}</span></li>`;
+      }).join('');
+    } else if (list) {
+      list.innerHTML = '<li><span class="muted">还没有记录——她还没被骂过，也没被哄过。</span></li>';
+    }
+
+    // 曲线：拿历史点画（不够就前面补 0）
+    const hp = (state.history || []).slice(0, 24).map((h) => Number(h.score) || 0).reverse();
+    if (hp.length > 1) drawSpark(hp);
+
+    // 旋钮回显
+    const pick = (seg, text) => {
+      [...seg.children].forEach((b) => b.classList.toggle('on', b.textContent === text));
+    };
+    if (cfg.temper != null) pick(document.getElementById('temper'), TEMPER_TEXT(cfg.temper));
+    if (cfg.calmHours != null) { calm.value = cfg.calmHours; document.getElementById('calmV').textContent = `${cfg.calmHours} 小时`; }
+    if (cfg.lowMood) pick(document.getElementById('lowmood'), cfg.lowMood);
+    if (cfg.useJudge != null) pick(document.getElementById('judge'), cfg.useJudge ? '开' : '关');
+  }
+
+  // 旋钮真的写回设置（写的是扁平键；脾气在设置里是数字，这里映射一下）
+  const TEMPER_OF = { 温柔: 1.4, 平衡: 1, 皮实: 0.7 };
+  const TEMPER_TEXT = (v) => (Number(v) >= 1.2 ? '温柔' : Number(v) <= 0.85 ? '皮实' : '平衡');
+  document.getElementById('temper').addEventListener('click', async (e) => {
+    if (!LIVE.on || e.target.tagName !== 'BUTTON') return;
+    await save({ temper: TEMPER_OF[e.target.textContent] ?? 1 });
+    document.getElementById('subTitle').textContent = `脾气已改成「${e.target.textContent}」，下一句话就按新的算。`;
+  });
+  calm.addEventListener('change', async () => {
+    if (!LIVE.on) return;
+    await save({ calmHours: Number(calm.value) });
+    document.getElementById('subTitle').textContent = `消气时间已改成 ${calm.value} 小时。`;
+  });
+  document.getElementById('lowmood').addEventListener('click', async (e) => {
+    if (!LIVE.on || e.target.tagName !== 'BUTTON') return;
+    await save({ lowMood: e.target.textContent });
+  });
+  document.getElementById('judge').addEventListener('click', async (e) => {
+    if (!LIVE.on || e.target.tagName !== 'BUTTON') return;
+    await save({ useJudge: e.target.textContent === '开' });
+  });
+
+  // 试一句：真实环境下会真的记一笔
+  document.getElementById('tryBtn').addEventListener('click', async (ev) => {
+    if (!LIVE.on) return;
+    ev.stopImmediatePropagation();
+    const t = document.getElementById('tryText').value.trim();
+    const out = document.getElementById('tryOut');
+    if (!t) { out.innerHTML = '先写一句。'; return; }
+    const map = [[/笨|蠢|傻|机器人|闭嘴|滚/i, 'insult', '被骂'], [/行了|好了好了|多大点事|至于吗/, 'dull', '被敷衍'],
+      [/可爱|好看|厉害|聪明|喜欢你|想你了/, 'praise', '被夸'], [/我陪你|别理他们|心疼|别难过/, 'soothe', '被哄']];
+    const hit = map.find(([re]) => re.test(t));
+    const r = await post('/api/note', { kind: hit ? hit[1] : 'neutral', why: t.slice(0, 40), isOwner: true });
+    if (!r?.ok) { out.innerHTML = `没记上：${r?.error || '应用没回话'}`; return; }
+    render(Number(r.score) || 0);
+    out.innerHTML = `记成 <b>${hit ? hit[2] : '平常'}</b>，分值 <b>${r.delta > 0 ? '+' + r.delta : r.delta}</b>，现在 <b>${r.score}</b> 分。`;
+  }, true);
+
+  bootLive();
+</script>
+</body>
+</html>

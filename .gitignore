@@ -1,0 +1,17 @@
+# 打包产物
+dist/
+
+# 插件自己落到本机的数据（心情分数、钩子日志），绝对不能进仓库
+.data/
+*.log
+hook.log
+mood.json
+
+# 补丁的备份
+*.bak-before-qq-agent-mood
+*.patched-*
+*.tmp-qqmood
+
+node_modules/
+.DS_Store
+Thumbs.db

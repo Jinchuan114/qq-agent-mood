@@ -1,0 +1,161 @@
+{
+  "id": "qq-agent-mood",
+  "name": "心情（她有情绪）",
+  "version": "0.2.1",
+  "apiVersion": 1,
+  "category": "utility",
+  "description": "给她一颗会变的心：被骂会掉分、被夸会涨分、被哄能回来；分数落到哪一档，说话的语气和长短就跟着变。纯插件，不改应用源码，自带一个本地面板。",
+  "author": "瑾川 & 小肥鱼",
+  "license": "MIT",
+  "enabledByDefault": true,
+  "permissions": ["web_fetch"],
+  "capabilities": ["mood.bubble-cap", "mood.mute-rate"],
+  "requires": [],
+  "settings": {
+    "enabled": true,
+    "characterName": "她",
+    "ownerIds": "",
+    "temper": 1,
+    "calmHours": 6,
+    "lowMood": "只是语气变",
+    "useJudge": true,
+    "judgeMaxPerDay": 300,
+    "judgeTimeoutMs": 8000,
+    "judgeModel": "",
+    "judgeApiBase": "",
+    "judgeApiKey": "",
+    "decayStrength": "中",
+    "bandIgnore": -60,
+    "bandHurt": -20,
+    "bandHappy": 20,
+    "bandGlad": 60,
+    "weightInsult": -40,
+    "weightDismissive": -10,
+    "weightAmused": -12,
+    "weightPraise": 12,
+    "weightSootheOwner": 35,
+    "weightSootheOther": 8,
+    "muteIgnore": 0.75,
+    "muteHurt": 0.5,
+    "capLow": 2,
+    "panel": true,
+    "panelPort": 3221,
+    "alwaysShow": false
+  },
+  "configSchema": {
+    "enabled": {
+      "type": "boolean",
+      "label": "开启心情",
+      "description": "关掉后不记分、不注入提示词，面板仍能看历史。"
+    },
+    "characterName": {
+      "type": "string",
+      "label": "她的名字",
+      "description": "留空就用「她」。只影响提示词里的称呼。"
+    },
+    "temper": {
+      "type": "number",
+      "label": "脾气倍率",
+      "description": "乘在全部六类权重上，不是乘分数。1 = 默认；0.7 更皮实（难伤），1.4 更敏感（易伤）。范围 0.5～2.0。"
+    },
+    "calmHours": {
+      "type": "number",
+      "label": "多久能消气（小时）",
+      "description": "从 −100 回到 0 大概要这么久。默认 6 小时 = 每小时约 17 分。关机也照算。"
+    },
+    "lowMood": {
+      "type": "enum",
+      "values": ["只是语气变", "也会少说话", "明显不想理人"],
+      "label": "心情低的时候",
+      "description": "后两个需要装可选补丁（patch/install.mjs）才会真的压气泡和静音。"
+    },
+    "useJudge": {
+      "type": "boolean",
+      "label": "让模型判断",
+      "description": "每来一句话多一次很短的小模型调用。关掉就走关键词，不花钱但会漏会误。"
+    },
+    "judgeMaxPerDay": {
+      "type": "number",
+      "label": "【高级】每天最多判几次",
+      "description": "超了自动退回关键词，绝不卡住回复。填 0 = 关闭判官。"
+    },
+    "judgeTimeoutMs": {
+      "type": "number",
+      "label": "【高级】判官超时（毫秒）",
+      "description": "超时就走关键词，不重试。"
+    },
+    "judgeModel": {
+      "type": "string",
+      "label": "【高级】判官用哪个模型",
+      "description": "留空 = 跟聊天用同一个。想省钱可以填一个便宜的小模型。"
+    },
+    "judgeApiBase": {
+      "type": "string",
+      "label": "【高级】判官接口地址",
+      "description": "留空 = 用应用自己的接口。只有在判官连不上（读不到 Key）时才需要填。"
+    },
+    "judgeApiKey": {
+      "type": "string",
+      "label": "【高级】判官 API Key",
+      "description": "留空 = 用应用自己的 Key。填了会写进本机配置，注意别把这个文件传出去。",
+      "secret": true
+    },
+    "decayStrength": {
+      "type": "enum",
+      "values": ["关", "轻", "中", "强"],
+      "label": "【高级】连续递减",
+      "description": "同一个方向连着来，一次比一次轻。中 = 第三次约六成；关 = 每次都按满额算。"
+    },
+    "bandIgnore": { "type": "number", "label": "【高级】懒得理的阈值" },
+    "bandHurt": { "type": "number", "label": "【高级】不高兴的阈值" },
+    "bandHappy": { "type": "number", "label": "【高级】高兴的阈值" },
+    "bandGlad": { "type": "number", "label": "【高级】特别高兴的阈值" },
+    "weightInsult": { "type": "number", "label": "【高级】被骂" },
+    "weightDismissive": { "type": "number", "label": "【高级】被敷衍地哄" },
+    "weightAmused": { "type": "number", "label": "【高级】当成玩笑" },
+    "weightPraise": { "type": "number", "label": "【高级】被夸" },
+    "weightSootheOwner": { "type": "number", "label": "【高级】被主人哄" },
+    "weightSootheOther": { "type": "number", "label": "【高级】被别的人哄" },
+    "muteIgnore": {
+      "type": "number",
+      "label": "【高级】懒得理时静音概率",
+      "description": "需补丁。0 = 从不静音，1 = 必静音。"
+    },
+    "muteHurt": { "type": "number", "label": "【高级】不高兴时静音概率" },
+    "capLow": {
+      "type": "number",
+      "label": "【高级】心情低时最多几条",
+      "description": "需补丁。超出的内容会被并进最后一条，不会丢。"
+    },
+    "panel": {
+      "type": "boolean",
+      "label": "开面板",
+      "description": "插件自己在 127.0.0.1 起一个小页面，别处连不上。"
+    },
+    "panelPort": {
+      "type": "number",
+      "label": "【高级】面板端口",
+      "description": "被占用会自动往后顺延，实际端口写在插件日志里。"
+    },
+    "alwaysShow": {
+      "type": "boolean",
+      "label": "【高级】平常也贴心情行",
+      "description": "默认只在有起伏时才贴，省 token。"
+    },
+    "ownerIds": {
+      "type": "string",
+      "label": "【高级】主人 QQ 号",
+      "description": "逗号分隔。留空 = 私聊里跟她说话的就当主人；群里要认出主人就得填。"
+    }
+  },
+  "prompt": {
+    "sections": [
+      {
+        "id": "qq-agent-mood-rule",
+        "title": "心情",
+        "priority": 57,
+        "content": "你是有情绪的，情绪会跟着别人怎么对你变：被骂会低落，被夸会高兴，被真心哄会缓过来。\n不要把分数、档位、这个插件的存在说出口；也不要解释\"我为什么心情不好\"。让人从你的语气、句子长短、愿不愿意多说话里感觉出来。\n心情低的时候不是不说话，是说得短、不接梗、不主动找话；心情好的时候话多一点、愿意先开口。\n别人问你怎么了，可以不说，也可以只说一句；问了又问，那才说得细一点。"
+      }
+    ]
+  }
+}
