@@ -4,6 +4,7 @@ import { clampScore, decayScore, bandOf, decayedWeight } from '../lib/score.js';
 import { ruleKind, normalizeKind } from '../lib/rule.js';
 import { applyKind } from '../lib/apply.js';
 import { buildMoodLine } from '../lib/prompt.js';
+import { triggerLine, looksLikeDump } from '../lib/text.js';
 
 let pass = 0, fail = 0;
 const eq = (name, got, want) => {
@@ -83,6 +84,20 @@ eq('不让她报分数', line.includes('别报分数'), true);
 eq('平常不贴（省 token）', buildMoodLine({ score: 0, since: t0, history: [] }, cfg, t0), '');
 eq('开了 alwaysShow 就贴', buildMoodLine({ score: 0, since: t0, history: [] }, { ...cfg, alwaysShow: true }, t0).length > 0, true);
 eq('关掉插件就不贴', buildMoodLine({ score: -80, since: t0, history: [] }, { ...cfg, enabled: false }, t0), '');
+
+console.log('· 转发记录不算骂她（2026-10-22 修）');
+eq('合并转发不判', triggerLine([{ text: '[合并转发 共75条] 大肥鱼(QQ:1094950020): 处理不了就说处理' }]), '');
+eq('转发两字也不判', triggerLine([{ text: '[转发] 别人的聊天' }]), '');
+eq('压扁的聊天记录不判', triggerLine([{ text: '阿三(QQ:111): 你真傻\n小四(QQ:222): 就是' }]), '');
+eq('拍一拍不判', triggerLine([{ text: '[拍一拍] 不加柠檬星海茉莉花茶(QQ:368997952) 拍了拍 我' }]), '');
+eq('纯表情包不判', triggerLine([{ text: '[表情包]' }]), '');
+eq('正常的一句照判', triggerLine([{ text: '你好傻啊' }]), '你好傻啊');
+eq('只看最后一条', triggerLine([{ text: '你真厉害' }, { text: '你真傻' }]), '你真傻');
+eq('最后一条是转发就不判', triggerLine([{ text: '你真厉害' }, { text: '[合并转发 共3条] x(QQ:1): d' }]), '');
+eq('没 entries 就用 ctx.text', triggerLine([], '你真傻'), '你真傻');
+eq('全空就是空', triggerLine([{ text: '   ' }], ''), '');
+eq('dump 识别', looksLikeDump('一(QQ:1): a\n二(QQ:2): b'), true);
+eq('单个名字不算 dump', looksLikeDump('大肥鱼(QQ:1094950020): 你好'), false);
 
 console.log(`\n结果：${pass} 通过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);

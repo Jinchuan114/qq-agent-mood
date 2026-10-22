@@ -11,6 +11,7 @@ import { ruleKind, normalizeKind } from './lib/rule.js';
 import { judgeKind } from './lib/judge.js';
 import { buildMoodLine } from './lib/prompt.js';
 import { bandOf, clampScore, decayScore } from './lib/score.js';
+import { triggerLine } from './lib/text.js';
 
 // 设置项是扁平的（应用的设置表单只认 boolean/number/enum/string），
 // 这里拼成内部用的 {bands,weights,mute,caps}，免得两套写法打架。
@@ -167,13 +168,20 @@ export const hooks = {
     if (cfg.enabled === false) return;
     // 应用传进来的原文在 triggerEntries 里（ctx.text 不存在），之前只读 ctx.text
     // 导致这个钩子每句都空转、真实聊天一次都没记过分。
+    // 2026-10-22：只判「这轮要回的那一条」。合并转发 / 拍一拍 / 纯图片表情一律不判，
+    // 否则别人转发的聊天记录会被当成在骂她（实测把分压到 −54、一直贴「不高兴」）。
     const entries = Array.isArray(ctx.triggerEntries) ? ctx.triggerEntries : [];
-    const text = (entries.map((e) => String(e?.text || '')).filter(Boolean).join('\n') || String(ctx.text || '')).trim();
-    if (!text) return;
+    const text = triggerLine(entries, ctx.text);
+    if (!text) {
+      const raw = String(entries.at(-1)?.text || ctx.text || '').slice(0, 30).replace(/\s+/g, ' ');
+      await trace(`before-context 跳过（转发/拍一拍/占位符）：${raw}`);
+      return;
+    }
     await trace(`before-context 进来：${text.slice(0, 40).replace(/\s+/g, ' ')}`);
 
-    const senderId = ctx.triggerEntries?.[0]?.senderId ?? ctx.senderId ?? '';
-    const name = ctx.triggerEntries?.[0]?.senderName ?? ctx.name ?? '';
+    const trigger = [...entries].reverse().find((e) => String(e?.text || '').trim());
+    const senderId = trigger?.senderId ?? ctx.senderId ?? '';
+    const name = trigger?.senderName ?? ctx.name ?? '';
     const { kind, by } = await classify(text, cfg);
     const now = Date.now();
     const st = await readState();
