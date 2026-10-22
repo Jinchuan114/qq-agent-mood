@@ -232,9 +232,14 @@ function bandNow(cfg) {
   return bandOf(score, cfg.bands);
 }
 
+// 「心情低的时候」三档：只是语气变 = 不许压气泡也不许静音（返回"没值"，
+// 交回应用原来的行为）；后两档才真的压。设置面板写了这个约定，代码必须兑现。
+const toneOnly = (cfg) => String(cfg?.lowMood || '') === '只是语气变';
+
 export const providers = {
   'mood.bubble-cap': () => {
     const cfg = cfgNow();
+    if (toneOnly(cfg)) return null;
     const band = bandNow(cfg);
     if (band === 'ignore') return Math.max(1, Number(cfg.caps?.low ?? 1));
     if (band === 'hurt') return Math.max(1, Number(cfg.caps?.low ?? 2));
@@ -242,6 +247,7 @@ export const providers = {
   },
   'mood.mute-rate': () => {
     const cfg = cfgNow();
+    if (toneOnly(cfg)) return 0;
     const band = bandNow(cfg);
     if (band === 'ignore') return Number(cfg.mute?.ignore ?? 0.75);
     if (band === 'hurt') return Number(cfg.mute?.hurt ?? 0.5);

@@ -45,6 +45,11 @@ const tail = JSON.stringify(messages);
 ok('不高兴会贴心情行', /不高兴|不太高兴/.test(tail), tail.slice(-240));
 ok('不让她报分数', /别报分数/.test(tail));
 ok('原消息没被替换', messages[1].content.startsWith('在吗'));
+// 默认「只是语气变」：心情低只改语气，不许压气泡、不许静音（设置面板是这么写的，代码必须兑现）
+ok('默认只改语气：不压气泡', mod.providers['mood.bubble-cap']() === null, String(mod.providers['mood.bubble-cap']()));
+ok('默认只改语气：不静音', Number(mod.providers['mood.mute-rate']()) === 0, String(mod.providers['mood.mute-rate']()));
+// 调成「也会少说话」之后，能力门才真的生效
+settings.lowMood = '也会少说话';
 ok('不高兴时气泡上限 2', round(mod.providers['mood.bubble-cap']()) === 2, String(mod.providers['mood.bubble-cap']()));
 ok('不高兴时静音率 0.5', Number(mod.providers['mood.mute-rate']()) === 0.5, String(mod.providers['mood.mute-rate']()));
 

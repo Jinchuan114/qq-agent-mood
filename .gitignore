@@ -16,3 +16,5 @@ node_modules/
 .DS_Store
 Thumbs.db
 scripts/private-words.local.json
+# 发版说明草稿（本地用，不进仓库）
+.release-notes.md

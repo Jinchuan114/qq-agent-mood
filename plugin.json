@@ -1,7 +1,7 @@
 {
   "id": "qq-agent-mood",
   "name": "心情（她有情绪）",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "apiVersion": 1,
   "category": "utility",
   "description": "给她一颗会变的心：被骂会掉分、被夸会涨分、被哄能回来；分数落到哪一档，说话的语气和长短就跟着变。纯插件，不改应用源码，自带一个本地面板。",
